@@ -1,0 +1,10 @@
+.method-container { padding: 48px 80px; }
+.method-back { cursor: pointer; color: #4a90d9; margin-bottom: 32px; }
+.method-cards { display: flex; gap: 24px; margin-top: 32px; }
+.method-card {
+  flex: 1; padding: 40px; border: 2px solid #e0e0e0; border-radius: 16px;
+  cursor: pointer; position: relative; transition: border-color 0.2s;
+}
+.method-card:hover { border-color: #4a90d9; }
+.method-card.recommended { border-color: #4a90d9; background: #f5f9ff; }
+.method-badge { position: absolute; top: -12px; left: 24px; background: #4a90d9; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; }

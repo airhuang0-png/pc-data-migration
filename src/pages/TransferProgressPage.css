@@ -1,0 +1,13 @@
+.transfer-container { display: flex; flex-direction: column; align-items: center; padding: 64px 24px; }
+.transfer-progress { display: flex; align-items: center; gap: 16px; width: 480px; margin-top: 24px; }
+.transfer-progress > div { flex: 1; }
+.transfer-percent { font-size: 24px; font-weight: 600; color: #4a90d9; min-width: 48px; }
+.transfer-stats { display: flex; gap: 48px; margin-top: 32px; }
+.transfer-stat { display: flex; flex-direction: column; align-items: center; }
+.transfer-stat-label { font-size: 12px; color: #888; }
+.transfer-stat-value { font-size: 14px; margin-top: 4px; }
+.transfer-log-toggle { margin-top: 32px; color: #4a90d9; cursor: pointer; }
+.transfer-log { width: 480px; max-height: 200px; overflow-y: auto; background: #f5f5f5; border-radius: 8px; padding: 12px; margin-top: 8px; }
+.transfer-log-line { font-size: 12px; color: #555; font-family: monospace; }
+.transfer-log-empty { color: #aaa; font-size: 12px; }
+.transfer-cancel { margin-top: 32px; background: none; border: 1px solid #ccc; border-radius: 8px; padding: 8px 24px; cursor: pointer; }

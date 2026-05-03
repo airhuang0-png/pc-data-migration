@@ -1,0 +1,14 @@
+.scan-container { padding: 40px 60px; }
+.scan-warning { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+.scan-layout { display: flex; gap: 32px; margin-top: 24px; }
+.scan-sections { flex: 1; }
+.scan-section { margin-bottom: 12px; border: 1px solid #e8e8e8; border-radius: 8px; padding: 12px; }
+.scan-section-header { display: flex; align-items: center; gap: 8px; font-weight: 600; cursor: pointer; }
+.scan-section-size { margin-left: auto; color: #888; font-weight: 400; }
+.scan-children { margin-left: 24px; margin-top: 8px; }
+.scan-child { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; font-size: 14px; }
+.scan-summary { width: 200px; padding: 20px; background: #f9f9f9; border-radius: 12px; align-self: flex-start; }
+.scan-capacity-bar { margin-bottom: 12px; }
+.scan-auto-btn { width: 100%; padding: 8px; background: #4a90d9; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 12px; }
+.scan-start-btn { margin-top: 24px; padding: 14px 48px; background: #4a90d9; color: white; border: none; border-radius: 10px; font-size: 16px; cursor: pointer; }
+.scan-start-btn:disabled { background: #ccc; cursor: not-allowed; }

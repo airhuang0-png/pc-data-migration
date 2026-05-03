@@ -1,0 +1,17 @@
+appId: com.pcmigrate.app
+productName: PC迁移助手
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - scripts/**/*
+win:
+  target: nsis
+  icon: resources/icon.ico
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+extraResources:
+  - from: scripts
+    to: scripts
