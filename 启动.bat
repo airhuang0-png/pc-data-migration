@@ -10,24 +10,23 @@ echo.
 
 where node >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] 未找到 Node.js，请先安装
-    echo https://nodejs.org
+    echo [错误] 未找到 Node.js，请先安装: https://nodejs.org
     pause
     exit /b 1
 )
 
 if not exist "node_modules\" (
     echo [1/3] 正在安装依赖，首次约 3-5 分钟...
-    call npm install 2>&1
+    call npm install
     if errorlevel 1 (
-        echo [错误] 依赖安装失败，尝试清理后重试...
+        echo [错误] 依赖安装失败，清理后重试...
         rmdir /s /q node_modules 2>nul
         call npm install --legacy-peer-deps
     )
 )
 
 if not exist "node_modules\electron\dist\electron.exe" (
-    echo [2/3] 正在下载 Electron，首次约 100MB...
+    echo [2/3] 正在下载 Electron（约 100MB）...
     call npm install electron --save-dev
 )
 
