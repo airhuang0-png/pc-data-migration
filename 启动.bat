@@ -32,5 +32,5 @@ if not exist "node_modules\electron\dist\electron.exe" (
 
 echo [3/3] 正在启动应用...
 echo.
-npx concurrently "npx vite" "npx wait-on http://localhost:5173 && npx electron ."
+npm run dev
 pause

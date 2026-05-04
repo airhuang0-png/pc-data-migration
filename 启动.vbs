@@ -33,6 +33,6 @@ End If
 If fs.FileExists(projectDir & "\启动日志.txt") Then fs.DeleteFile projectDir & "\启动日志.txt"
 
 ' Launch the app silently
-ws.Run "cmd /c npx concurrently ""npx vite"" ""npx wait-on http://localhost:5173 && npx electron .""", 0, False
+ws.Run "cmd /c npm run dev", 0, False
 
 WScript.Quit 0
