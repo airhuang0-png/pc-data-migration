@@ -4,5 +4,6 @@ dist-electron/
 release/
 .env
 *.log
+启动日志.txt
 .DS_Store
 Thumbs.db
