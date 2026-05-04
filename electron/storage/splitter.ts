@@ -64,7 +64,3 @@ export function mergeFiles(partPattern: string, outputPath: string, totalParts: 
 
   fs.closeSync(outFd);
 }
-
-export function detectFileSystem(targetPath: string): 'FAT32' | 'NTFS' | 'exFAT' | 'unknown' {
-  return 'NTFS';
-}

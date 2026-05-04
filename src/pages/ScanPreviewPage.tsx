@@ -17,7 +17,7 @@ export default function ScanPreviewPage() {
   const [scanning, setScanning] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [scanMsg, setScanMsg] = useState('正在扫描...');
-  const [capacity, setCapacity] = useState({ available: 300 * 1024 * 1024 * 1024, used: 0 });
+  const [capacity] = useState({ available: 300 * 1024 * 1024 * 1024 });
 
   useEffect(() => {
     const timer = setTimeout(() => {

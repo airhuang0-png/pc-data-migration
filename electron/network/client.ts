@@ -22,15 +22,6 @@ export class MigrationClient {
     });
   }
 
-  private setupHandlers() {
-    if (!this.ws) return;
-    this.ws.on('message', (data) => {
-      const msg = JSON.parse(data.toString());
-      const handler = this.messageHandlers.get(msg.type);
-      handler?.(msg.payload);
-    });
-  }
-
   on(messageType: string, handler: (payload: unknown) => void) {
     this.messageHandlers.set(messageType, handler);
   }

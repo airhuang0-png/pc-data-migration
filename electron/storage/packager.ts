@@ -6,17 +6,9 @@ import * as tar from 'tar-stream';
 import { ScanResult } from '../scanner';
 import { serializeManifest } from './manifest';
 
-export interface PackProgress {
-  percent: number;
-  currentFile: string;
-  bytesWritten: number;
-  totalBytes: number;
-}
-
 export async function packToFile(
   scanResult: ScanResult,
   outputPath: string,
-  onProgress?: (p: PackProgress) => void,
   abortSignal?: { aborted: boolean }
 ): Promise<string> {
   const pack = tar.pack();
