@@ -5,13 +5,13 @@ directories:
 files:
   - dist/**/*
   - dist-electron/**/*
-  - scripts/**/*
 win:
-  target: nsis
-  icon: resources/icon.ico
+  target:
+    - nsis
+    - portable
 nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
+  oneClick: true
+  allowToChangeInstallationDirectory: false
 extraResources:
   - from: scripts
     to: scripts

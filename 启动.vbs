@@ -4,35 +4,32 @@ Set fs = CreateObject("Scripting.FileSystemObject")
 projectDir = fs.GetParentFolderName(WScript.ScriptFullName)
 ws.CurrentDirectory = projectDir
 
-' Check Node.js
+packedExe = projectDir & "\release\win-unpacked\PC迁移助手.exe"
+
+' --- 优先使用打包版本（无需 Node.js）---
+If fs.FileExists(packedExe) Then
+    ws.Run """" & packedExe & """", 1, False
+    WScript.Quit 0
+End If
+
+' --- 打包版本不存在，检查 Node.js ---
 ret = ws.Run("cmd /c where node >nul 2>&1", 0, True)
 If ret <> 0 Then
-    ws.Popup "未找到 Node.js，请先安装:" & vbCrLf & "https://nodejs.org", 10, "PC迁移助手", 48
+    ws.Popup "未找到打包版本，且未安装 Node.js" & vbCrLf & vbCrLf & _
+             "请在开发机上运行: npm run package" & vbCrLf & _
+             "然后将 release 目录复制到本机即可使用", _
+             10, "PC迁移助手", 48
     WScript.Quit 1
 End If
 
-' Install npm dependencies if needed
+' --- 开发模式 ---
 If Not fs.FolderExists(projectDir & "\node_modules") Then
-    ret = ws.Run("cmd /c npm install > """ & projectDir & "\启动日志.txt"" 2>&1", 0, True)
+    ret = ws.Run("cmd /c npm install", 0, True)
     If ret <> 0 Then
-        ws.Popup "依赖安装失败，请检查网络后重试" & vbCrLf & "详情见: 启动日志.txt", 10, "PC迁移助手", 48
+        ws.Popup "依赖安装失败，请检查网络后重试", 10, "PC迁移助手", 48
         WScript.Quit 1
     End If
 End If
 
-' Download Electron if needed
-If Not fs.FileExists(projectDir & "\node_modules\electron\dist\electron.exe") Then
-    ret = ws.Run("cmd /c npm install electron --save-dev > """ & projectDir & "\启动日志.txt"" 2>&1", 0, True)
-    If ret <> 0 Then
-        ws.Popup "Electron 下载失败，请检查网络后重试", 10, "PC迁移助手", 48
-        WScript.Quit 1
-    End If
-End If
-
-' Clean up old log
-If fs.FileExists(projectDir & "\启动日志.txt") Then fs.DeleteFile projectDir & "\启动日志.txt"
-
-' Launch the app silently
 ws.Run "cmd /c npm run dev", 0, False
-
 WScript.Quit 0
