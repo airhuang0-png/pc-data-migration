@@ -2,12 +2,12 @@ import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { MigrationServer } from './network/server';
 import { MigrationClient } from './network/client';
-import { startAdvertising, discoverServers } from './network/mdns';
+import { startBroadcast, startDiscovery } from './network/discovery';
 
 let mainWindow: BrowserWindow | null = null;
 let server: MigrationServer | null = null;
 let client: MigrationClient | null = null;
-let stopAdvertising: (() => void) | null = null;
+let stopBroadcast: (() => void) | null = null;
 let stopDiscovery: (() => void) | null = null;
 
 function createWindow() {
@@ -43,10 +43,9 @@ ipcMain.handle('pairing:generate', async () => {
   try {
     server = new MigrationServer();
     const { port, session } = await server.start(() => {
-      // Client connected — notify renderer
       mainWindow?.webContents.send('pairing:ready');
     });
-    stopAdvertising = startAdvertising(port);
+    stopBroadcast = startBroadcast(port);
     return { code: session.code, port };
   } catch (e: any) {
     return { error: e.message };
@@ -58,7 +57,7 @@ ipcMain.handle('pairing:connect', async (_event, code: string) => {
   return new Promise((resolve) => {
     let resolved = false;
 
-    stopDiscovery = discoverServers(async (info) => {
+    stopDiscovery = startDiscovery(async (info) => {
       if (resolved) return;
       resolved = true;
 
@@ -90,15 +89,17 @@ ipcMain.handle('pairing:connect', async (_event, code: string) => {
         }
         resolve({ success: false, error: '未在局域网中找到发送端' });
       }
-    }, 15000);
+    }, DISCOVERY_TIMEOUT);
   });
 });
 
+const DISCOVERY_TIMEOUT = 15000;
+
 // --- Cleanup ---
 ipcMain.handle('pairing:cancel', async () => {
-  if (stopAdvertising) {
-    stopAdvertising();
-    stopAdvertising = null;
+  if (stopBroadcast) {
+    stopBroadcast();
+    stopBroadcast = null;
   }
   if (stopDiscovery) {
     stopDiscovery();
