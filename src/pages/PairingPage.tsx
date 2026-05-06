@@ -8,15 +8,49 @@ export default function PairingPage() {
   const role = params.get('role') || 'source';
   const [code, setCode] = useState('');
   const [inputCode, setInputCode] = useState(['', '', '', '', '', '']);
+  const [error, setError] = useState('');
+  const [connecting, setConnecting] = useState(false);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const paired = useRef(false);
 
   useEffect(() => {
     if (role === 'source') {
-      const generated = String(Math.floor(100000 + Math.random() * 900000));
-      setCode(generated);
-      window.electronAPI?.invoke('pairing:generate', generated);
+      window.electronAPI?.invoke('pairing:generate').then((result: any) => {
+        if (result?.code) {
+          setCode(result.code);
+        } else if (result?.error) {
+          setError(result.error);
+        }
+      });
+
+      window.electronAPI?.on('pairing:ready', () => {
+        paired.current = true;
+        navigate('/scan?role=source&method=lan');
+      });
     }
+    return () => {
+      window.electronAPI?.removeAllListeners('pairing:ready');
+      if (!paired.current) {
+        window.electronAPI?.invoke('pairing:cancel');
+      }
+    };
   }, [role]);
+
+  const handleConnect = async (codeStr: string) => {
+    setConnecting(true);
+    setError('');
+    const result: any = await window.electronAPI?.invoke('pairing:connect', codeStr);
+    setConnecting(false);
+    if (result?.success) {
+      paired.current = true;
+      navigate('/scan?role=target&method=lan');
+    } else {
+      setError(result?.error || '连接失败');
+      setInputCode(['', '', '', '', '', '']);
+      inputRefs.current[0]?.focus();
+    }
+  };
 
   const handleInput = (index: number, value: string) => {
     if (!/^\d?$/.test(value)) return;
@@ -25,9 +59,13 @@ export default function PairingPage() {
     setInputCode(next);
     if (value && index < 5) inputRefs.current[index + 1]?.focus();
     if (next.every(d => d !== '')) {
-      window.electronAPI?.invoke('pairing:connect', next.join(''))
-        .then((ok: unknown) => ok && navigate('/scan?role=target&method=lan'));
+      handleConnect(next.join(''));
     }
+  };
+
+  const handleCancel = () => {
+    window.electronAPI?.invoke('pairing:cancel');
+    navigate('/method?role=' + role);
   };
 
   if (role === 'source') {
@@ -35,9 +73,10 @@ export default function PairingPage() {
       <div className="pairing-container">
         <h1>配对码</h1>
         <p className="pairing-hint">请在新电脑上输入此 6 位数字</p>
-        <div className="pairing-code-display">{code}</div>
+        <div className="pairing-code-display">{code || '...'}</div>
+        {error && <p className="pairing-error">{error}</p>}
         <p className="pairing-waiting">等待新电脑连接...</p>
-        <button className="pairing-back" onClick={() => navigate('/method?role=source')}>取消</button>
+        <button className="pairing-back" onClick={handleCancel}>取消</button>
       </div>
     );
   }
@@ -55,11 +94,14 @@ export default function PairingPage() {
             maxLength={1}
             value={d}
             onChange={e => handleInput(i, e.target.value)}
+            disabled={connecting}
             autoFocus={i === 0}
           />
         ))}
       </div>
-      <button className="pairing-back" onClick={() => navigate('/method?role=target')}>返回</button>
+      {connecting && <p className="pairing-status">正在连接...</p>}
+      {error && <p className="pairing-error">{error}</p>}
+      <button className="pairing-back" onClick={handleCancel} disabled={connecting}>返回</button>
     </div>
   );
 }

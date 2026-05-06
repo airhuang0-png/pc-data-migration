@@ -1,9 +1,24 @@
 import createMdns from 'multicast-dns';
+import * as os from 'os';
 
 const SERVICE_TYPE = '_pcmigrate._tcp.local';
+const SERVICE_NAME = 'PC迁移助手._pcmigrate._tcp.local';
+
+function getLocalIP(): string {
+  const nets = os.networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]!) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
 
 export function startAdvertising(port: number): () => void {
   const mdns = createMdns();
+  const localIP = getLocalIP();
 
   mdns.on('query', (query: any) => {
     for (const q of query.questions) {
@@ -14,13 +29,13 @@ export function startAdvertising(port: number): () => void {
             type: 'PTR',
             class: 1 as any,
             ttl: 120,
-            data: `PC迁移助手._pcmigrate._tcp.local`
+            data: SERVICE_NAME
           }, {
-            name: `PC迁移助手._pcmigrate._tcp.local`,
+            name: SERVICE_NAME,
             type: 'SRV',
             class: 1 as any,
             ttl: 120,
-            data: { port, target: 'localhost' }
+            data: { port, target: localIP }
           }]
         });
       }
@@ -34,16 +49,20 @@ export function discoverServers(onFound: (info: { host: string; port: number }) 
   const mdns = createMdns();
 
   mdns.on('response', (response: any) => {
+    let srvTarget: string | null = null;
+    let srvPort: number | null = null;
+
     for (const answer of response.answers) {
-      if (answer.name === SERVICE_TYPE && answer.type === 'PTR') {
-        const srvAnswer = response.answers.find(
-          (a: any) => a.type === 'SRV'
-        );
-        if (srvAnswer && 'data' in srvAnswer && srvAnswer.data && typeof srvAnswer.data === 'object' && 'port' in srvAnswer.data) {
-          const port = (srvAnswer.data as { port: number }).port;
-          onFound({ host: 'localhost', port });
+      if (answer.name === SERVICE_NAME && answer.type === 'SRV') {
+        if (answer.data && typeof answer.data === 'object' && 'port' in answer.data && 'target' in answer.data) {
+          srvPort = (answer.data as { port: number }).port;
+          srvTarget = (answer.data as { target: string }).target;
         }
       }
+    }
+
+    if (srvTarget && srvPort) {
+      onFound({ host: srvTarget, port: srvPort });
     }
   });
 

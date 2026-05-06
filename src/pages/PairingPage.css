@@ -6,3 +6,5 @@
 .pairing-digit { width: 52px; height: 64px; text-align: center; font-size: 28px; border: 2px solid #ccc; border-radius: 8px; }
 .pairing-digit:focus { border-color: #4a90d9; outline: none; }
 .pairing-back { background: none; border: 1px solid #ccc; border-radius: 8px; padding: 8px 24px; cursor: pointer; margin-top: 16px; }
+.pairing-error { color: #e74c3c; margin-top: 16px; font-size: 14px; }
+.pairing-status { color: #4a90d9; margin-top: 16px; font-size: 14px; }
