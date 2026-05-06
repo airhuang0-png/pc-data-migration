@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "build": "vite build && tsc -p tsconfig.node.json",
-    "package": "vite build && tsc -p tsconfig.node.json && electron-builder",
-    "package:dir": "vite build && tsc -p tsconfig.node.json && electron-builder --dir",
+    "package": "vite build && tsc -p tsconfig.node.json && set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder",
+    "package:dir": "vite build && tsc -p tsconfig.node.json && set CSC_IDENTITY_AUTO_DISCOVERY=false && electron-builder --dir",
     "test": "vitest run",
     "test:watch": "vitest"
   },

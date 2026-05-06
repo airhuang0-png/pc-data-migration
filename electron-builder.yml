@@ -12,6 +12,9 @@ win:
 nsis:
   oneClick: true
   allowToChangeInstallationDirectory: false
+extraFiles:
+  - from: vcredist/
+    to: .
 extraResources:
   - from: scripts
     to: scripts
