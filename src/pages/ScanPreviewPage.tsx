@@ -8,6 +8,13 @@ interface Section {
   children?: Section[];
 }
 
+function formatSize(bytes: number) {
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024**3)).toFixed(1)} GB`;
+  if (bytes >= 1024 * 1024) return `${(bytes / (1024**2)).toFixed(1)} MB`;
+  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${bytes} B`;
+}
+
 export default function ScanPreviewPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -17,38 +24,55 @@ export default function ScanPreviewPage() {
   const [scanning, setScanning] = useState(true);
   const [sections, setSections] = useState<Section[]>([]);
   const [scanMsg, setScanMsg] = useState('正在扫描...');
-  const [capacity] = useState({ available: 300 * 1024 * 1024 * 1024 });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setSections([
-        { id: 'system_settings', label: '系统设置', size: 1.2 * 1024 * 1024, selected: true, priority: 0 },
-        { id: 'browser', label: '浏览器数据', size: 86 * 1024 * 1024, selected: true, priority: 1,
-          children: [
-            { id: 'browser_chrome', label: 'Chrome', size: 45 * 1024 * 1024, selected: true, priority: 0 },
-            { id: 'browser_edge', label: 'Edge', size: 41 * 1024 * 1024, selected: true, priority: 0 },
-          ]
-        },
-        { id: 'app_configs', label: '应用配置', size: 2.1 * 1024 * 1024 * 1024, selected: true, priority: 2,
-          children: [
-            { id: 'app_wechat', label: '微信', size: 1.9 * 1024 * 1024 * 1024, selected: true, priority: 0 },
-            { id: 'app_office', label: 'Office', size: 200 * 1024 * 1024, selected: true, priority: 0 },
-          ]
-        },
-        { id: 'files', label: '用户文件', size: 120 * 1024 * 1024 * 1024, selected: true, priority: 3,
-          children: [
-            { id: 'files_desktop', label: '桌面', size: 12 * 1024 * 1024 * 1024, selected: true, priority: 0 },
-            { id: 'files_docs', label: '文档', size: 35 * 1024 * 1024 * 1024, selected: true, priority: 1 },
-            { id: 'files_pics', label: '图片', size: 45 * 1024 * 1024 * 1024, selected: false, priority: 2 },
-            { id: 'files_videos', label: '视频', size: 25 * 1024 * 1024 * 1024, selected: false, priority: 3 },
-            { id: 'files_downloads', label: '下载', size: 3 * 1024 * 1024 * 1024, selected: false, priority: 4 },
-          ]
-        },
-      ]);
+    if (role === 'source') {
+      window.electronAPI?.on('scan:progress', (_data: unknown) => {
+        const data = _data as { stage: string; message: string };
+        setScanMsg(data.message);
+      });
+
+      window.electronAPI?.invoke('scan:start').then((result: any) => {
+        if (result?.success) {
+          const m = result.manifest;
+          const sects: Section[] = [];
+
+          if (m.sections.files) {
+            sects.push({ id: 'files', label: '用户文件', size: m.sections.files.size, selected: true, priority: 3 });
+          }
+          if (m.sections.browser) {
+            const browsers = m.sections.browser.browsers || [];
+            sects.push({
+              id: 'browser', label: '浏览器数据', size: m.sections.browser.size, selected: true, priority: 1,
+              children: browsers.map((b: string) => ({ id: `browser_${b}`, label: b, size: m.sections.browser!.size, selected: true, priority: 0 }))
+            });
+          }
+          if (m.sections.app_configs) {
+            const apps = m.sections.app_configs.apps || [];
+            sects.push({
+              id: 'app_configs', label: '应用配置', size: m.sections.app_configs.size, selected: true, priority: 2,
+              children: apps.map((a: string) => ({ id: `app_${a}`, label: a, size: m.sections.app_configs!.size, selected: true, priority: 0 }))
+            });
+          }
+          if (m.sections.system_settings) {
+            sects.push({ id: 'system_settings', label: '系统设置', size: m.sections.system_settings.size, selected: true, priority: 0 });
+          }
+
+          setSections(sects);
+          setScanning(false);
+        } else {
+          setScanMsg('扫描失败: ' + (result?.error || '未知错误'));
+        }
+      });
+    } else {
+      // Target side: wait to receive data
       setScanning(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+    }
+
+    return () => {
+      window.electronAPI?.removeAllListeners('scan:progress');
+    };
+  }, [role]);
 
   const toggleSection = (id: string, parentId?: string) => {
     setSections(prev => prev.map(s => {
@@ -64,15 +88,12 @@ export default function ScanPreviewPage() {
     }));
   };
 
-  const totalSelected = sections.reduce((sum, s) =>
-    sum + (s.children
-      ? s.children.filter(c => c.selected).reduce((cs, c) => cs + c.size, 0)
-      : s.selected ? s.size : 0), 0);
+  const totalSelected = sections
+    .filter(s => s.selected)
+    .reduce((sum, s) => sum + s.size, 0);
 
-  const formatSize = (bytes: number) => {
-    if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024**3)).toFixed(1)} GB`;
-    if (bytes >= 1024 * 1024) return `${(bytes / (1024**2)).toFixed(1)} MB`;
-    return `${(bytes / 1024).toFixed(1)} KB`;
+  const getSelectedIds = (): string[] => {
+    return sections.filter(s => s.selected).map(s => s.id);
   };
 
   if (scanning) {
@@ -84,16 +105,19 @@ export default function ScanPreviewPage() {
     );
   }
 
-  const fits = totalSelected <= capacity.available;
+  // Target side: just show waiting
+  if (role === 'target') {
+    return (
+      <div className="scan-container">
+        <h1>等待发送端传输...</h1>
+        <p>源电脑将选择要迁移的数据并开始传输</p>
+      </div>
+    );
+  }
 
   return (
     <div className="scan-container">
       <h1>选择要迁移的内容</h1>
-      {!fits && (
-        <div className="scan-warning">
-          ⚠️ 已选数据超过目标容量 {formatSize(Math.max(0, totalSelected - capacity.available))}
-        </div>
-      )}
       <div className="scan-layout">
         <div className="scan-sections">
           {sections.map(s => (
@@ -118,15 +142,14 @@ export default function ScanPreviewPage() {
           ))}
         </div>
         <div className="scan-summary">
-          <div className="scan-capacity-bar">
-            <ProgressBar percent={capacity.available > 0 ? Math.round((totalSelected / capacity.available) * 100) : 100} />
-          </div>
           <p>已选: {formatSize(totalSelected)}</p>
-          <p>目标可用: {formatSize(capacity.available)}</p>
-          {!fits && <button className="scan-auto-btn">智能推荐选择</button>}
         </div>
       </div>
-      <button className="scan-start-btn" disabled={totalSelected === 0} onClick={() => navigate(`/transfer?role=${role}&method=${method}`)}>
+      <button
+        className="scan-start-btn"
+        disabled={totalSelected === 0}
+        onClick={() => navigate(`/transfer?role=${role}&method=${method}&sections=${getSelectedIds().join(',')}`)}
+      >
         开始迁移
       </button>
     </div>

@@ -3,7 +3,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { generatePairingCode, validatePairingCode, PairingSession } from './pairing';
 
 export interface TransferMessage {
-  type: 'manifest' | 'chunk' | 'complete' | 'error' | 'cancel';
+  type: 'manifest' | 'chunk' | 'complete' | 'error' | 'cancel' | 'file_start' | 'file_end';
   payload?: unknown;
 }
 
@@ -14,6 +14,7 @@ export class MigrationServer {
   private port: number = 0;
   private httpServer: ReturnType<typeof createServer> | null = null;
   private onPaired: (() => void) | null = null;
+  private onMessage: ((msg: TransferMessage) => void) | null = null;
 
   async start(onPaired?: () => void): Promise<{ port: number; session: PairingSession }> {
     this.session = generatePairingCode();
@@ -56,6 +57,10 @@ export class MigrationServer {
     });
   }
 
+  onClientMessage(handler: (msg: TransferMessage) => void) {
+    this.onMessage = handler;
+  }
+
   private handleClient(ws: WebSocket) {
     ws.on('message', (data) => {
       try {
@@ -63,6 +68,7 @@ export class MigrationServer {
         if (msg.type === 'cancel') {
           this.clientSocket = null;
         }
+        this.onMessage?.(msg);
       } catch { /* skip */ }
     });
   }
@@ -70,6 +76,12 @@ export class MigrationServer {
   send(msg: TransferMessage) {
     if (this.clientSocket?.readyState === WebSocket.OPEN) {
       this.clientSocket.send(JSON.stringify(msg));
+    }
+  }
+
+  sendRaw(data: Buffer) {
+    if (this.clientSocket?.readyState === WebSocket.OPEN) {
+      this.clientSocket.send(data);
     }
   }
 
@@ -83,5 +95,6 @@ export class MigrationServer {
     this.httpServer?.close();
     this.session = null;
     this.clientSocket = null;
+    this.onMessage = null;
   }
 }
