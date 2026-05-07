@@ -8,7 +8,8 @@ export class MigrationClient {
   private messageHandlers: Map<string, (payload: unknown) => void> = new Map();
   private receiveChunks: Buffer[] = [];
   private receiveFileName: string | null = null;
-  private receiveResolve: ((path: string) => void) | null = null;
+  private receiveResolve: ((p: string) => void) | null = null;
+  private receivedFilePath: string | null = null;
 
   connect(host: string, port: number, code: string): Promise<boolean> {
     return new Promise((resolve) => {
@@ -44,24 +45,25 @@ export class MigrationClient {
     if (!this.ws) return;
 
     this.ws.on('message', (data: Buffer) => {
-      // Binary frame = file chunk
+      // ws library sends TEXT as string, BINARY as Buffer
+      // But in practice, JSON strings may come as Buffer too
       if (Buffer.isBuffer(data) && data.length > 0) {
-        // Check if it looks like JSON (starts with '{')
+        // Peek: if first byte is '{', treat as JSON text
         if (data[0] === 0x7B) {
           try {
             const msg = JSON.parse(data.toString());
             this.dispatchMessage(msg);
             return;
-          } catch { /* fall through to binary handling */ }
+          } catch { /* fall through */ }
         }
-        // Pure binary chunk
+        // Binary chunk
         if (this.receiveChunks) {
           this.receiveChunks.push(data);
         }
         return;
       }
 
-      // Text frame
+      // String text frame
       try {
         const msg = JSON.parse(data.toString());
         this.dispatchMessage(msg);
@@ -73,8 +75,11 @@ export class MigrationClient {
     if (msg.type === 'file_start') {
       this.receiveChunks = [];
       this.receiveFileName = msg.payload?.name || 'bundle.tar.gz';
+      // Notify handlers (used for auto-starting import)
+      const handler = this.messageHandlers.get('file_start');
+      if (handler) handler(msg.payload);
     } else if (msg.type === 'file_end') {
-      if (this.receiveChunks.length > 0 && this.receiveFileName) {
+      if (this.receiveChunks && this.receiveChunks.length > 0 && this.receiveFileName) {
         const fileBuf = Buffer.concat(this.receiveChunks);
         const outDir = path.join(os.tmpdir(), 'pcmig_receive');
         fs.mkdirSync(outDir, { recursive: true });
@@ -82,8 +87,14 @@ export class MigrationClient {
         fs.writeFileSync(outPath, fileBuf);
         this.receiveChunks = [];
         this.receiveFileName = null;
-        this.receiveResolve?.(outPath);
-        this.receiveResolve = null;
+        // Resolve any pending waiter
+        if (this.receiveResolve) {
+          this.receiveResolve(outPath);
+          this.receiveResolve = null;
+        } else {
+          // File arrived before waitForFile was called — store it
+          this.receivedFilePath = outPath;
+        }
       }
     } else {
       const handler = this.messageHandlers.get(msg.type);
@@ -91,8 +102,14 @@ export class MigrationClient {
     }
   }
 
-  /** Wait for a file to be received and return its path */
+  /** Wait for a file to be received. If already received, returns immediately. */
   waitForFile(): Promise<string> {
+    // Already received before this call
+    if (this.receivedFilePath) {
+      const p = this.receivedFilePath;
+      this.receivedFilePath = null;
+      return Promise.resolve(p);
+    }
     return new Promise((resolve) => {
       this.receiveResolve = resolve;
     });
@@ -125,5 +142,6 @@ export class MigrationClient {
     this.messageHandlers.clear();
     this.receiveChunks = [];
     this.receiveResolve = null;
+    this.receivedFilePath = null;
   }
 }

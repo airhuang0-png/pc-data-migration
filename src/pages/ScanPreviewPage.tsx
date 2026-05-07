@@ -36,28 +36,22 @@ export default function ScanPreviewPage() {
         if (result?.success) {
           const m = result.manifest;
           const sects: Section[] = [];
-
           if (m.sections.files) {
             sects.push({ id: 'files', label: '用户文件', size: m.sections.files.size, selected: true, priority: 3 });
           }
           if (m.sections.browser) {
             const browsers = m.sections.browser.browsers || [];
-            sects.push({
-              id: 'browser', label: '浏览器数据', size: m.sections.browser.size, selected: true, priority: 1,
-              children: browsers.map((b: string) => ({ id: `browser_${b}`, label: b, size: m.sections.browser!.size, selected: true, priority: 0 }))
-            });
+            sects.push({ id: 'browser', label: '浏览器数据', size: m.sections.browser.size, selected: true, priority: 1,
+              children: browsers.map((b: string) => ({ id: `browser_${b}`, label: b, size: m.sections.browser!.size, selected: true, priority: 0 })) });
           }
           if (m.sections.app_configs) {
             const apps = m.sections.app_configs.apps || [];
-            sects.push({
-              id: 'app_configs', label: '应用配置', size: m.sections.app_configs.size, selected: true, priority: 2,
-              children: apps.map((a: string) => ({ id: `app_${a}`, label: a, size: m.sections.app_configs!.size, selected: true, priority: 0 }))
-            });
+            sects.push({ id: 'app_configs', label: '应用配置', size: m.sections.app_configs.size, selected: true, priority: 2,
+              children: apps.map((a: string) => ({ id: `app_${a}`, label: a, size: m.sections.app_configs!.size, selected: true, priority: 0 })) });
           }
           if (m.sections.system_settings) {
             sects.push({ id: 'system_settings', label: '系统设置', size: m.sections.system_settings.size, selected: true, priority: 0 });
           }
-
           setSections(sects);
           setScanning(false);
         } else {
@@ -65,12 +59,16 @@ export default function ScanPreviewPage() {
         }
       });
     } else {
-      // Target side: wait to receive data
+      // Target: listen for source starting transfer
+      window.electronAPI?.on('import:detected', () => {
+        navigate('/transfer?role=target&method=lan');
+      });
       setScanning(false);
     }
 
     return () => {
       window.electronAPI?.removeAllListeners('scan:progress');
+      window.electronAPI?.removeAllListeners('import:detected');
     };
   }, [role]);
 

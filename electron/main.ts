@@ -69,8 +69,13 @@ ipcMain.handle('pairing:connect', async (_event, code: string) => {
         stopDiscovery = null;
         client = new MigrationClient();
         const ok = await client.connect(info.host, info.port, code);
-        if (ok) resolve({ success: true, host: info.host, port: info.port });
-        else resolve({ success: false, error: '配对码错误或已过期' });
+        if (ok) {
+          // Auto-detect when source starts sending — notify renderer to begin import
+          client.on('file_start', () => {
+            mainWindow?.webContents.send('import:detected');
+          });
+          resolve({ success: true, host: info.host, port: info.port });
+        } else resolve({ success: false, error: '配对码错误或已过期' });
       } catch (e: any) {
         resolve({ success: false, error: e.message });
       }
